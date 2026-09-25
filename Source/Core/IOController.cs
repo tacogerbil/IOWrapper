@@ -44,12 +44,13 @@ namespace HidWizards.IOWrapper.Core
 
         ~IOController()
         {
-            Dispose(true);
+            Dispose(false);
         }
 
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -58,11 +59,14 @@ namespace HidWizards.IOWrapper.Core
                 return;
             if (disposing)
             {
-                foreach (var provider in _providers.Values)
+                if (_providers != null)
                 {
-                    provider.Dispose();
+                    foreach (var provider in _providers.Values)
+                    {
+                        provider.Dispose();
+                    }
+                    _providers = null;
                 }
-                _providers = null;
             }
             disposed = true;
             Log("Disposed");
@@ -291,3 +295,5 @@ namespace HidWizards.IOWrapper.Core
         }
     }
 }
+
+

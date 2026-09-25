@@ -45,7 +45,7 @@ namespace Hidwizards.IOWrapper.Libraries.DeviceHandlers.Devices
 
         private void CallbackHandler(InputSubscriptionRequest subreq, short value)
         {
-            Task.Factory.StartNew(() => subreq.Callback(value));
+            subreq.Callback(value);
             //ThreadPool.QueueUserWorkItem( cb => callback(value));
             //callback(value);
         }
@@ -207,3 +207,4 @@ namespace Hidwizards.IOWrapper.Libraries.DeviceHandlers.Devices
         public abstract void Dispose();
     }
 }
+

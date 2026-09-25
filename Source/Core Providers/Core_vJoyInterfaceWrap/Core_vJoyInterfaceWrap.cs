@@ -1,4 +1,4 @@
-﻿using HidWizards.IOWrapper.ProviderInterface;
+using HidWizards.IOWrapper.ProviderInterface;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -60,12 +60,13 @@ namespace Core_vJoyInterfaceWrap
 
         ~Core_vJoyInterfaceWrap()
         {
-            Dispose();
+            Dispose(false);
         }
 
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -74,15 +75,24 @@ namespace Core_vJoyInterfaceWrap
                 return;
             if (disposing)
             {
-                for (uint devId = 0; devId < 16; devId++)
-                {
-                    _vJoyDevices[devId].Dispose();
-                }
-                _vJoyDevices = null;
-                vJ = null;
+                DisposeManagedResources();
             }
             disposed = true;
             Log("Provider {0} was Disposed", ProviderName);
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private void DisposeManagedResources()
+        {
+            for (uint devId = 0; devId < 16; devId++)
+            {
+                if (_vJoyDevices != null && devId < _vJoyDevices.Length && _vJoyDevices[devId] != null)
+                {
+                    _vJoyDevices[devId].Dispose();
+                }
+            }
+            _vJoyDevices = null;
+            vJ = null;
         }
 
         private static void Log(string formatStr, params object[] arguments)

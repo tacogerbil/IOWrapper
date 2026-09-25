@@ -16,6 +16,7 @@ namespace Core_ViGEm
         private class DS4Handler : DeviceHandler
         {
             private readonly DualShock4Report _report = new DualShock4Report();
+            private readonly object _reportSync = new object();
 
             private static readonly List<DualShock4Axes> AxisIndexes = new List<DualShock4Axes>
             {
@@ -95,42 +96,48 @@ namespace Core_ViGEm
 
             protected override void SetAxisState(BindingDescriptor bindingDescriptor, int state)
             {
-                var inputId = bindingDescriptor.Index;
-                _report.SetAxis(AxisIndexes[inputId], (byte)((state + 32768) / 256));
-                SendReport();
+                lock (_reportSync)
+                {
+                    var inputId = bindingDescriptor.Index;
+                    _report.SetAxis(AxisIndexes[inputId], (byte)((state + 32768) / 256));
+                    SendReport();
+                }
             }
-
             protected override void SetButtonState(BindingDescriptor bindingDescriptor, int state)
             {
-                var inputId = bindingDescriptor.Index;
-                if (inputId >= ButtonIndexes.Count)
+                lock (_reportSync)
                 {
-                    _report.SetSpecialButtonState(SpecialButtonIndexes[inputId - ButtonIndexes.Count], state != 0);
+                    var inputId = bindingDescriptor.Index;
+                    if (inputId >= ButtonIndexes.Count)
+                    {
+                        _report.SetSpecialButtonState(SpecialButtonIndexes[inputId - ButtonIndexes.Count], state != 0);
+                    }
+                    else
+                    {
+                        _report.SetButtonState(ButtonIndexes[inputId], state != 0);
+                    }
+                    SendReport();
                 }
-                else
-                {
-                    _report.SetButtonState(ButtonIndexes[inputId], state != 0);
-                }
-                SendReport();
             }
-
             protected override void SetPovState(BindingDescriptor bindingDescriptor, int state)
             {
-                var inputId = bindingDescriptor.Index;
-                var mapping = IndexToVector[inputId];
-                var axisState = _povAxisStates[mapping.Axis];
-                var newState = state == 1 ? mapping.Direction : 0;
-                if (axisState == newState) return;
-                _povAxisStates[mapping.Axis] = newState;
+                lock (_reportSync)
+                {
+                    var inputId = bindingDescriptor.Index;
+                    var mapping = IndexToVector[inputId];
+                    var axisState = _povAxisStates[mapping.Axis];
+                    var newState = state == 1 ? mapping.Direction : 0;
+                    if (axisState == newState) return;
+                    _povAxisStates[mapping.Axis] = newState;
 
-                var buttons = (int)_report.Buttons;
-                buttons &= ~15; // Clear all the Dpad bits
-                
-                buttons |= (int)AxisStatesToDpadValue[(_povAxisStates["x"], _povAxisStates["y"])];
-                _report.Buttons = (ushort) buttons;
-                SendReport();
+                    var buttons = (int)_report.Buttons;
+                    buttons &= ~15; // Clear all the Dpad bits
+
+                    buttons |= (int)AxisStatesToDpadValue[(_povAxisStates["x"], _povAxisStates["y"])];
+                    _report.Buttons = (ushort) buttons;
+                    SendReport();
+                }
             }
-
             private void SendReport()
             {
                 ((DualShock4Controller)target).SendReport(_report);
@@ -138,3 +145,4 @@ namespace Core_ViGEm
         }
     }
 }
+
